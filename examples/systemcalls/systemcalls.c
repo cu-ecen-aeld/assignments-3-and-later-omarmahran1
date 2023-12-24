@@ -8,7 +8,8 @@
  *   value was returned by the command issued in @param cmd.
 */
 bool do_system(const char *cmd)
-{
+{ 
+    int ret = 0; 
 
 /*
  * TODO  add your code here
@@ -16,6 +17,14 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+
+    ret = system(cmd);
+
+    if (ret == -1){
+
+        return false ;
+    }
+
 
     return true;
 }
@@ -58,7 +67,37 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+fflush(stdout);
+ pid_t pid = fork();
 
+    if (pid == -1) {
+        // Fork failed
+        perror("Fork failed");
+        return 0;
+    } else if (pid == 0) {
+        // Child process
+        execv(command[0], command);
+        perror("Execv failed");
+        exit(1);
+    } else {
+        // Parent process
+        int status;
+        wait(&status);
+
+        if (WIFEXITED(status)) {
+            int exitStatus = WEXITSTATUS(status);
+            if (exitStatus != 0) {
+                printf("Command execution failed with exit status: %d\n", exitStatus);
+                return 0;
+            }
+        } else if (WIFSIGNALED(status)) {
+            int signalNumber = WTERMSIG(status);
+            printf("Command execution terminated by signal: %d\n", signalNumber);
+            return 0;
+        }
+    }
+
+    return 1;
     va_end(args);
 
     return true;
@@ -92,6 +131,29 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+int kidpid;
+int status;
+int fd = open("testfile.txt", O_WRONLY|O_TRUNC|O_CREAT, 0644);
+if (fd < 0) { perror("open"); abort(); }
+fflush(stdout);
+switch (kidpid = fork()) {
+  case -1: perror("fork"); abort();
+  case 0:
+    if (dup2(fd, 1) < 0) { perror("dup2"); abort(); }
+    close(fd);
+    execv(command[0], command); perror("execvp"); abort();
+  default:
+   // Parent process
+        
+        wait(&status);
+        if (WIFEXITED(status)) {
+            printf("Child process exited with status: %d\n", WEXITSTATUS(status));
+        } else {
+            printf("Child process exited abnormally\n");
+        }
+        }
+    close(fd);
+    /* do whatever the parent wants to do. */
 
     va_end(args);
 
